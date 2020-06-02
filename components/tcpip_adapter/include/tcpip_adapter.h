@@ -100,19 +100,6 @@ esp_err_t tcpip_adapter_get_netif(tcpip_adapter_if_t tcpip_if, void ** netif);
 esp_err_t tcpip_adapter_create_ip6_linklocal(tcpip_adapter_if_t tcpip_if);
 
 /**
- * @brief Compatible version of setting ethernet default handlers
- * @note Compatible version of wifi handlers are provided in a separate header,
- * as this used to be called privately from wifi_init()
- * @return ESP_OK on success
- */
-esp_err_t tcpip_adapter_set_default_eth_handlers(void);
-
-/**
- * @brief Compatible version of network stack input function. Translates to esp_netif_receive()
- */
-esp_err_t tcpip_adapter_eth_input(void *buffer, uint16_t len, void *eb);
-
-/**
  * @brief Compatible version of network stack input function. Translates to esp_netif_receive()
  */
 esp_err_t tcpip_adapter_sta_input(void *buffer, uint16_t len, void *eb);
@@ -127,12 +114,6 @@ esp_err_t tcpip_adapter_ap_input(void *buffer, uint16_t len, void *eb);
  * @return ESP_OK on success
  */
 esp_err_t tcpip_adapter_clear_default_wifi_handlers(void);
-
-/**
- * @brief Compatible version of former tcpip_adapter API to clear default ethernet handlers
- * @return ESP_OK on success
- */
-esp_err_t tcpip_adapter_clear_default_eth_handlers(void);
 
 /**
  * @brief Compatible version of former tcpip_adapter API of esp_netif_dhcps_stop
@@ -193,11 +174,6 @@ int tcpip_adapter_get_netif_index(tcpip_adapter_if_t tcpip_if);
  * @brief Compatible version of former tcpip_adapter API of esp_netif_get_sta_list
 */
 esp_err_t tcpip_adapter_get_sta_list(const wifi_sta_list_t *wifi_sta_list, tcpip_adapter_sta_list_t *tcpip_sta_list);
-
-/**
- * @brief Compatible version of former tcpip_adapter API of esp_netif_action_start for default ethernet
-*/
-esp_err_t tcpip_adapter_eth_start(uint8_t *mac, tcpip_adapter_ip_info_t *ip_info, void *args);
 
 /**
  * @brief Compatible version of former tcpip_adapter API of esp_netif_action_start for default station

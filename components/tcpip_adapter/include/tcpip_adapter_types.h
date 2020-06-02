@@ -51,7 +51,6 @@ extern "C" {
 typedef enum {
     TCPIP_ADAPTER_IF_STA = 0,     /**< Wi-Fi STA (station) interface */
     TCPIP_ADAPTER_IF_AP,          /**< Wi-Fi soft-AP interface */
-    TCPIP_ADAPTER_IF_ETH,         /**< Ethernet interface */
     TCPIP_ADAPTER_IF_TEST,        /**< tcpip stack test interface */
     TCPIP_ADAPTER_IF_MAX
 } tcpip_adapter_if_t;

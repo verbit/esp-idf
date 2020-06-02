@@ -49,18 +49,6 @@ extern "C" {
         .route_prio = 10 \
     };
 
-#define ESP_NETIF_INHERENT_DEFAULT_ETH() \
-    {   \
-        .flags = (esp_netif_flags_t)(ESP_NETIF_DHCP_CLIENT | ESP_NETIF_FLAG_GARP | ESP_NETIF_FLAG_EVENT_IP_MODIFIED), \
-        ESP_COMPILER_DESIGNATED_INIT_AGGREGATE_TYPE_EMPTY(mac) \
-        ESP_COMPILER_DESIGNATED_INIT_AGGREGATE_TYPE_EMPTY(ip_info) \
-        .get_ip_event = IP_EVENT_ETH_GOT_IP, \
-        .lost_ip_event = 0, \
-        .if_key = "ETH_DEF", \
-        .if_desc = "eth", \
-        .route_prio = 50 \
-    };
-
 #define ESP_NETIF_INHERENT_DEFAULT_PPP() \
     {   \
         .flags = ESP_NETIF_FLAG_IS_PPP, \
@@ -72,16 +60,6 @@ extern "C" {
         .if_desc = "ppp",   \
         .route_prio = 128   \
 };
-
-/**
- * @brief  Default configuration reference of ethernet interface
- */
-#define ESP_NETIF_DEFAULT_ETH()                  \
-    {                                            \
-        .base = ESP_NETIF_BASE_DEFAULT_ETH,      \
-        .driver = NULL,                          \
-        .stack = ESP_NETIF_NETSTACK_DEFAULT_ETH, \
-    }
 
 /**
  * @brief  Default configuration reference of WIFI AP
@@ -123,17 +101,11 @@ extern "C" {
 #define ESP_NETIF_BASE_DEFAULT_WIFI_AP         &_g_esp_netif_inherent_ap_config
 
 /**
- * @brief  Default base config (esp-netif inherent) of ethernet interface
- */
-#define ESP_NETIF_BASE_DEFAULT_ETH             &_g_esp_netif_inherent_eth_config
-
-/**
  * @brief  Default base config (esp-netif inherent) of ppp interface
  */
 #define ESP_NETIF_BASE_DEFAULT_PPP             &_g_esp_netif_inherent_ppp_config
 
 
-#define ESP_NETIF_NETSTACK_DEFAULT_ETH          _g_esp_netif_netstack_default_eth
 #define ESP_NETIF_NETSTACK_DEFAULT_WIFI_STA     _g_esp_netif_netstack_default_wifi_sta
 #define ESP_NETIF_NETSTACK_DEFAULT_WIFI_AP      _g_esp_netif_netstack_default_wifi_ap
 #define ESP_NETIF_NETSTACK_DEFAULT_PPP          _g_esp_netif_netstack_default_ppp
@@ -144,7 +116,6 @@ extern "C" {
 //      implementation that is invisible to user API
 //  - Here referenced only as opaque pointers
 //
-extern const esp_netif_netstack_config_t *_g_esp_netif_netstack_default_eth;
 extern const esp_netif_netstack_config_t *_g_esp_netif_netstack_default_wifi_sta;
 extern const esp_netif_netstack_config_t *_g_esp_netif_netstack_default_wifi_ap;
 extern const esp_netif_netstack_config_t *_g_esp_netif_netstack_default_ppp;
@@ -156,7 +127,6 @@ extern const esp_netif_netstack_config_t *_g_esp_netif_netstack_default_ppp;
 //
 extern const esp_netif_inherent_config_t _g_esp_netif_inherent_sta_config;
 extern const esp_netif_inherent_config_t _g_esp_netif_inherent_ap_config;
-extern const esp_netif_inherent_config_t _g_esp_netif_inherent_eth_config;
 extern const esp_netif_inherent_config_t _g_esp_netif_inherent_ppp_config;
 
 extern const esp_netif_ip_info_t _g_esp_netif_soft_ap_ip;

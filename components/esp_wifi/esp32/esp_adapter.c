@@ -42,7 +42,6 @@
 #include "soc/syscon_reg.h"
 #include "phy_init_data.h"
 #include "driver/periph_ctrl.h"
-#include "nvs.h"
 #include "os.h"
 #include "esp_smartconfig.h"
 #include "esp_coexist_internal.h"
@@ -536,6 +535,73 @@ void IRAM_ATTR coex_bb_reset_unlock_wrapper(uint32_t restore)
 int32_t IRAM_ATTR coex_is_in_isr_wrapper(void)
 {
     return !xPortCanYield();
+}
+
+/*=================espwifi NVS API=========================*/
+/*stub functions*/
+static inline int32_t esp_nvs_open_wrapper(const char *name, uint32_t open_mode, uint32_t *out_handle)
+{
+    return 0;
+}
+
+int32_t nvs_set_i8(uint32_t handle, const char *key, int8_t value)
+{
+    return 0;
+}
+
+int32_t nvs_get_i8(uint32_t handle, const char *key, int8_t *out_value)
+{
+    return 0;
+}
+
+int32_t nvs_set_u8(uint32_t handle, const char *key, uint8_t value)
+{
+    return 0;
+}
+
+int32_t nvs_get_u8(uint32_t handle, const char *key, uint8_t *out_value)
+{
+    return 0;
+}
+
+int32_t nvs_set_u16(uint32_t handle, const char *key, uint16_t value)
+{
+    return 0;
+}
+
+int32_t nvs_get_u16(uint32_t handle, const char *key, uint16_t *out_value)
+{
+    return 0;
+}
+
+uint32_t nvs_open(const char* name, uint32_t open_mode, uint32_t *out_handle)
+{
+    return 0;
+}
+
+void nvs_close(uint32_t handle)
+{
+    return 0;
+}
+
+int32_t nvs_commit(uint32_t handle)
+{
+    return 0;
+}
+
+int32_t nvs_set_blob(uint32_t handle, const char *key, const void *value, size_t length)
+{
+    return 0;
+}
+
+int32_t nvs_get_blob(uint32_t handle, const char *key, void *out_value, size_t *length)
+{
+    return 0;
+}
+
+int32_t nvs_erase_key(uint32_t handle, const char *key)
+{
+    return 0;
 }
 
 wifi_osi_funcs_t g_wifi_osi_funcs = {

@@ -14,9 +14,6 @@
 
 #include "esp_netif.h"
 #include "esp_wifi_default.h"
-#if CONFIG_ETH_ENABLED
-#include "esp_eth.h"
-#endif
 
 //
 // Purpose of this module is to provide
@@ -32,8 +29,6 @@
 const esp_netif_inherent_config_t _g_esp_netif_inherent_sta_config = ESP_NETIF_INHERENT_DEFAULT_WIFI_STA();
 
 const esp_netif_inherent_config_t _g_esp_netif_inherent_ap_config = ESP_NETIF_INHERENT_DEFAULT_WIFI_AP();
-
-const esp_netif_inherent_config_t _g_esp_netif_inherent_eth_config = ESP_NETIF_INHERENT_DEFAULT_ETH();
 
 const esp_netif_inherent_config_t _g_esp_netif_inherent_ppp_config = ESP_NETIF_INHERENT_DEFAULT_PPP();
 

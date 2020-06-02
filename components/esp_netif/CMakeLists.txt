@@ -8,4 +8,4 @@ idf_component_register(SRCS "esp_netif_handlers.c"
                             "lwip/esp_netif_sta_list.c"
                     INCLUDE_DIRS include
                     PRIV_INCLUDE_DIRS lwip private_include
-                    REQUIRES lwip esp_eth tcpip_adapter)
+                    REQUIRES lwip tcpip_adapter)

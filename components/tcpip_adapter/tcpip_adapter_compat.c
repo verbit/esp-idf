@@ -19,9 +19,6 @@
 
 #if CONFIG_ESP_NETIF_TCPIP_ADAPTER_COMPATIBLE_LAYER
 
-#if CONFIG_ETH_ENABLED
-#include "esp_eth.h"
-#endif
 #include "tcpip_adapter_types.h"
 #include "esp_wifi_default.h"
 
@@ -46,7 +43,6 @@ static esp_netif_t *s_esp_netifs[TCPIP_ADAPTER_IF_MAX] = { NULL };
 static const char* s_netif_keyif[TCPIP_ADAPTER_IF_MAX] = {
         "WIFI_STA_DEF",
         "WIFI_AP_DEF",
-        "ETH_DEF",
 };
 
 static bool s_tcpip_adapter_compat = false;
@@ -103,45 +99,6 @@ void tcpip_adapter_init(void)
     if (ESP_OK != (err = esp_netif_init())) {
         ESP_LOGE(TAG, "ESP-NETIF initialization failed with %d in tcpip_adapter compatibility mode", err);
     }
-}
-
-#if CONFIG_ETH_ENABLED
-
-esp_err_t tcpip_adapter_clear_default_eth_handlers(void)
-{
-    return esp_eth_clear_default_handlers(netif_from_if(TCPIP_ADAPTER_IF_ETH));
-}
-
-esp_err_t tcpip_adapter_set_default_eth_handlers(void)
-{
-    if (s_tcpip_adapter_compat) {
-        esp_netif_config_t cfg = ESP_NETIF_DEFAULT_ETH();
-        esp_netif_t *eth_netif = esp_netif_new(&cfg);
-
-        s_esp_netifs[TCPIP_ADAPTER_IF_ETH] = eth_netif;
-
-        return esp_eth_set_default_handlers(eth_netif);
-    }
-    return ESP_OK;
-
-}
-
-esp_err_t tcpip_adapter_compat_start_eth(void *eth_driver)
-{
-    if (s_tcpip_adapter_compat) {
-        esp_netif_t *esp_netif = netif_from_if(TCPIP_ADAPTER_IF_ETH);
-        if (esp_netif) {
-            esp_netif_attach(esp_netif, esp_eth_new_netif_glue(eth_driver));
-        }
-    }
-    return ESP_OK;
-}
-
-#endif
-
-esp_err_t tcpip_adapter_eth_input(void *buffer, uint16_t len, void *eb)
-{
-    return esp_netif_receive(netif_from_if(TCPIP_ADAPTER_IF_ETH), buffer, len, eb);
 }
 
 esp_err_t tcpip_adapter_sta_input(void *buffer, uint16_t len, void *eb)
@@ -305,12 +262,6 @@ static esp_err_t tcpip_adapter_compat_start_netif(esp_netif_t *netif, uint8_t *m
     esp_netif_set_ip_info(netif, (esp_netif_ip_info_t *)ip_info);
     esp_netif_action_start(netif, NULL, 0, NULL);
     return ESP_OK;
-}
-
-esp_err_t tcpip_adapter_eth_start(uint8_t *mac, tcpip_adapter_ip_info_t *ip_info, void *args)
-{
-    return tcpip_adapter_compat_start_netif(netif_from_if(TCPIP_ADAPTER_IF_ETH),
-                                            mac, ip_info);
 }
 
 esp_err_t tcpip_adapter_sta_start(uint8_t *mac, tcpip_adapter_ip_info_t *ip_info)

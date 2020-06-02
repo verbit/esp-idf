@@ -22,10 +22,6 @@
 #include "esp_netif_types.h"
 #include "esp_netif_defaults.h"
 
-#if CONFIG_ETH_ENABLED
-#include "esp_eth_netif_glue.h"
-#endif
-
 //
 // Note: tcpip_adapter legacy API has to be included by default to provide full compatibility
 //  for applications that used tcpip_adapter API without explicit inclusion of tcpip_adapter.h

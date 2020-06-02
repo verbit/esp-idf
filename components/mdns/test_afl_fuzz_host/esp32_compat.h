@@ -195,7 +195,6 @@ typedef struct {
 typedef enum {
     TCPIP_ADAPTER_IF_STA = 0,     /**< ESP32 station interface */
     TCPIP_ADAPTER_IF_AP,          /**< ESP32 soft-AP interface */
-    TCPIP_ADAPTER_IF_ETH,         /**< ESP32 ethernet interface */
     TCPIP_ADAPTER_IF_MAX
 } tcpip_adapter_if_t;
 

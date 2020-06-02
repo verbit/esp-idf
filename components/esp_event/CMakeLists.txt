@@ -1,9 +1,3 @@
-if(IDF_TARGET STREQUAL "esp32")
-    set(priv_requires esp_eth esp_timer)
-else()
-    set(priv_requires esp_timer)
-endif()
-
 idf_component_register(SRCS "default_event_loop.c"
                             "esp_event.c"
                             "esp_event_private.c"
@@ -12,7 +6,7 @@ idf_component_register(SRCS "default_event_loop.c"
                     INCLUDE_DIRS "include"
                     PRIV_INCLUDE_DIRS "private_include"
                     REQUIRES log esp_netif
-                    PRIV_REQUIRES ${priv_requires}
+                    PRIV_REQUIRES esp_timer
                     LDFRAGMENTS linker.lf)
 
 if(CONFIG_ESP_EVENT_LOOP_PROFILING)

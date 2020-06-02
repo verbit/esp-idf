@@ -24,8 +24,6 @@
 #include "esp_phy_init.h"
 #include "esp_system.h"
 #include "esp_log.h"
-#include "nvs.h"
-#include "nvs_flash.h"
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/portmacro.h"
@@ -607,68 +605,72 @@ static const char* PHY_CAL_VERSION_KEY = "cal_version";
 static const char* PHY_CAL_MAC_KEY = "cal_mac";
 static const char* PHY_CAL_DATA_KEY = "cal_data";
 
-static esp_err_t load_cal_data_from_nvs_handle(nvs_handle_t handle,
-        esp_phy_calibration_data_t* out_cal_data);
+// static esp_err_t load_cal_data_from_nvs_handle(nvs_handle_t handle,
+//         esp_phy_calibration_data_t* out_cal_data);
 
-static esp_err_t store_cal_data_to_nvs_handle(nvs_handle_t handle,
-        const esp_phy_calibration_data_t* cal_data);
+// static esp_err_t store_cal_data_to_nvs_handle(nvs_handle_t handle,
+//         const esp_phy_calibration_data_t* cal_data);
 
 esp_err_t esp_phy_load_cal_data_from_nvs(esp_phy_calibration_data_t* out_cal_data)
 {
-    nvs_handle_t handle;
-    esp_err_t err = nvs_open(PHY_NAMESPACE, NVS_READONLY, &handle);
-    if (err == ESP_ERR_NVS_NOT_INITIALIZED) {
-        ESP_LOGE(TAG, "%s: NVS has not been initialized. "
-                "Call nvs_flash_init before starting WiFi/BT.", __func__);
-        return err;
-    } else if (err != ESP_OK) {
-        ESP_LOGD(TAG, "%s: failed to open NVS namespace (0x%x)", __func__, err);
-        return err;
-    }
-    err = load_cal_data_from_nvs_handle(handle, out_cal_data);
-    nvs_close(handle);
-    return err;
+    // nvs_handle_t handle;
+    // esp_err_t err = nvs_open(PHY_NAMESPACE, NVS_READONLY, &handle);
+    // if (err == ESP_ERR_NVS_NOT_INITIALIZED) {
+    //     ESP_LOGE(TAG, "%s: NVS has not been initialized. "
+    //             "Call nvs_flash_init before starting WiFi/BT.", __func__);
+    //     return err;
+    // } else if (err != ESP_OK) {
+    //     ESP_LOGD(TAG, "%s: failed to open NVS namespace (0x%x)", __func__, err);
+    //     return err;
+    // }
+    // err = load_cal_data_from_nvs_handle(handle, out_cal_data);
+    // nvs_close(handle);
+    // return err;
+    return ESP_FAIL;
 }
 
 esp_err_t esp_phy_store_cal_data_to_nvs(const esp_phy_calibration_data_t* cal_data)
 {
-    nvs_handle_t handle;
-    esp_err_t err = nvs_open(PHY_NAMESPACE, NVS_READWRITE, &handle);
-    if (err != ESP_OK) {
-        ESP_LOGD(TAG, "%s: failed to open NVS namespace (0x%x)", __func__, err);
-        return err;
-    }
-    else {
-        err = store_cal_data_to_nvs_handle(handle, cal_data);
-        nvs_close(handle);
-        return err;
-    }
+    // nvs_handle_t handle;
+    // esp_err_t err = nvs_open(PHY_NAMESPACE, NVS_READWRITE, &handle);
+    // if (err != ESP_OK) {
+    //     ESP_LOGD(TAG, "%s: failed to open NVS namespace (0x%x)", __func__, err);
+    //     return err;
+    // }
+    // else {
+    //     err = store_cal_data_to_nvs_handle(handle, cal_data);
+    //     nvs_close(handle);
+    //     return err;
+    // }
+    return ESP_FAIL;
 }
 
 esp_err_t esp_phy_erase_cal_data_in_nvs(void)
 {
-    nvs_handle_t handle;
-    esp_err_t err = nvs_open(PHY_NAMESPACE, NVS_READWRITE, &handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "%s: failed to open NVS phy namespace (0x%x)", __func__, err);
-        return err;
-    }
-    else {
-        err = nvs_erase_all(handle);
-        if (err != ESP_OK) {
-            ESP_LOGE(TAG, "%s: failed to erase NVS phy namespace (0x%x)", __func__, err);
-        }
-        else {
-            err = nvs_commit(handle);
-            if (err != ESP_OK) {
-                ESP_LOGE(TAG, "%s: failed to commit NVS phy namespace (0x%x)", __func__, err);
-            }
-        }
-    }
-    nvs_close(handle);
-    return err;
+    // nvs_handle_t handle;
+    // esp_err_t err = nvs_open(PHY_NAMESPACE, NVS_READWRITE, &handle);
+    // if (err != ESP_OK) {
+    //     ESP_LOGE(TAG, "%s: failed to open NVS phy namespace (0x%x)", __func__, err);
+    //     return err;
+    // }
+    // else {
+    //     err = nvs_erase_all(handle);
+    //     if (err != ESP_OK) {
+    //         ESP_LOGE(TAG, "%s: failed to erase NVS phy namespace (0x%x)", __func__, err);
+    //     }
+    //     else {
+    //         err = nvs_commit(handle);
+    //         if (err != ESP_OK) {
+    //             ESP_LOGE(TAG, "%s: failed to commit NVS phy namespace (0x%x)", __func__, err);
+    //         }
+    //     }
+    // }
+    // nvs_close(handle);
+    // return err;
+    return ESP_FAIL;
 }
 
+/*
 static esp_err_t load_cal_data_from_nvs_handle(nvs_handle_t handle,
         esp_phy_calibration_data_t* out_cal_data)
 {
@@ -753,6 +755,7 @@ static esp_err_t store_cal_data_to_nvs_handle(nvs_handle_t handle,
 
     return err;
 }
+*/
 
 #if CONFIG_ESP32_REDUCE_PHY_TX_POWER
 // TODO: fix the esp_phy_reduce_tx_power unused warning for esp32s2 - IDF-759
