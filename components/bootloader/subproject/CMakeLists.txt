@@ -15,7 +15,7 @@ if(NOT IDF_TARGET)
         "in by the parent build process.")
 endif()
 
-set(COMPONENTS bootloader esptool_py partition_table soc bootloader_support log spi_flash micro-ecc main efuse)
+set(COMPONENTS bootloader esptool_py partition_table soc bootloader_support log spi_flash main efuse)
 set(BOOTLOADER_BUILD 1)
 include("${IDF_PATH}/tools/cmake/project.cmake")
 set(common_req log esp_rom esp_common xtensa)

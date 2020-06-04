@@ -124,10 +124,6 @@ if(CONFIG_LWIP_PPP_SUPPORT)
         "lwip/src/netif/ppp/polarssl/sha1.c")
 endif()
 
-if(CONFIG_ETH_ENABLED)
-    list(APPEND srcs "port/esp32/netif/ethernetif.c")
-endif()
-
 if(CONFIG_VFS_SUPPORT_IO)
     list(APPEND srcs "port/esp32/vfs_lwip.c")
 else()
@@ -138,7 +134,7 @@ idf_component_register(SRCS "${srcs}"
                     INCLUDE_DIRS "${include_dirs}"
                     LDFRAGMENTS linker.lf
                     REQUIRES vfs esp_wifi
-                    PRIV_REQUIRES esp_netif tcpip_adapter)
+                    PRIV_REQUIRES esp_netif)
 
 # lots of LWIP source files evaluate macros that check address of stack variables
 target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-address)

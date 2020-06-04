@@ -47,7 +47,6 @@
 #include "esp_system.h"
 #include "esp_spi_flash.h"
 #include "esp_flash_internal.h"
-#include "nvs_flash.h"
 #include "esp_event.h"
 #include "esp_spi_flash.h"
 #include "esp_ipc.h"
@@ -62,7 +61,6 @@
 #include "esp_coexist_internal.h"
 #include "esp_debug_helpers.h"
 #include "esp_core_dump.h"
-#include "esp_app_trace.h"
 #include "esp_private/dbg_stubs.h"
 #include "esp_clk_internal.h"
 #include "esp_timer.h"
@@ -302,10 +300,6 @@ void start_cpu0_default(void)
 
     esp_timer_init();
     esp_set_time_from_rtc();
-#if CONFIG_APPTRACE_ENABLE
-    err = esp_apptrace_init();
-    assert(err == ESP_OK && "Failed to init apptrace module on PRO CPU!");
-#endif
 #if CONFIG_SYSVIEW_ENABLE
     SEGGER_SYSVIEW_Conf();
 #endif

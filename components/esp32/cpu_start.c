@@ -57,7 +57,6 @@
 #include "esp32/cache_err_int.h"
 #include "esp_coexist_internal.h"
 #include "esp_core_dump.h"
-#include "esp_app_trace.h"
 #include "esp_private/dbg_stubs.h"
 #include "esp_flash_encrypt.h"
 #include "esp32/spiram.h"
@@ -383,10 +382,6 @@ void start_cpu0_default(void)
 
     esp_timer_init();
     esp_set_time_from_rtc();
-#if CONFIG_APPTRACE_ENABLE
-    err = esp_apptrace_init();
-    assert(err == ESP_OK && "Failed to init apptrace module on PRO CPU!");
-#endif
 #if CONFIG_SYSVIEW_ENABLE
     SEGGER_SYSVIEW_Conf();
 #endif
@@ -480,10 +475,6 @@ void start_cpu1_default(void)
     }
 #if CONFIG_ESP32_TRAX_TWOBANKS
     trax_start_trace(TRAX_DOWNCOUNT_WORDS);
-#endif
-#if CONFIG_APPTRACE_ENABLE
-    esp_err_t err = esp_apptrace_init();
-    assert(err == ESP_OK && "Failed to init apptrace module on APP CPU!");
 #endif
 #if CONFIG_ESP_INT_WDT
     //Initialize the interrupt watch dog for CPU1.

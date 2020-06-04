@@ -47,8 +47,7 @@ else()
                       app_update
                       lwip
                       spi_flash
-                      wpa_supplicant
-                      tcpip_adapter)
+                      wpa_supplicant)
 
     idf_build_get_property(build_components BUILD_COMPONENTS)
     foreach(req ${optional_reqs})

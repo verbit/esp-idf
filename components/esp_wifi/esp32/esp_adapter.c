@@ -27,6 +27,7 @@
 #include "freertos/xtensa_api.h"
 #include "freertos/portmacro.h"
 #include "freertos/xtensa_api.h"
+#include "esp_timer.h"
 #include "esp_types.h"
 #include "esp_system.h"
 #include "esp_task.h"

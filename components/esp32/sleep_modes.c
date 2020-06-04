@@ -22,6 +22,7 @@
 #include "esp32/clk.h"
 #include "esp_newlib.h"
 #include "esp_spi_flash.h"
+#include "esp_timer.h"
 #include "esp32/rom/cache.h"
 #include "esp32/rom/rtc.h"
 #include "esp32/rom/uart.h"

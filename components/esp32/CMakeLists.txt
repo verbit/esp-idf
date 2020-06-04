@@ -11,7 +11,7 @@ if(BOOTLOADER_BUILD)
     target_linker_script(${COMPONENT_LIB} INTERFACE "ld/esp32.peripherals.ld")
 else()
     # Regular app build
-    set(srcs 
+    set(srcs
         "cache_err_int.c"
         "cache_sram_mmu.c"
         "clk.c"
@@ -35,7 +35,7 @@ else()
     # driver is a public requirement because esp_sleep.h uses gpio_num_t & touch_pad_t
     # app_update is added here because cpu_start.c uses esp_ota_get_app_description() function.
     # esp_timer is added here because cpu_start.c uses esp_timer
-    set(priv_requires app_trace app_update bootloader_support log mbedtls pthread
+    set(priv_requires app_update bootloader_support log mbedtls pthread
         spi_flash vfs espcoredump esp_common perfmon esp_timer)
     set(fragments linker.lf ld/esp32_fragments.lf)
 
@@ -58,7 +58,7 @@ else()
 
     # Process the template file through the linker script generation mechanism, and use the output for linking the
     # final binary
-    target_linker_script(${COMPONENT_LIB} INTERFACE "${CMAKE_CURRENT_LIST_DIR}/ld/esp32.project.ld.in" 
+    target_linker_script(${COMPONENT_LIB} INTERFACE "${CMAKE_CURRENT_LIST_DIR}/ld/esp32.project.ld.in"
                         PROCESS "${CMAKE_CURRENT_BINARY_DIR}/ld/esp32.project.ld")
 
     target_linker_script(${COMPONENT_LIB} INTERFACE "ld/esp32.peripherals.ld")
