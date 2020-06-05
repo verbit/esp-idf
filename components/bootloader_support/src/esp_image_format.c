@@ -97,7 +97,7 @@ static esp_err_t verify_checksum(bootloader_sha256_handle_t sha_handle, uint32_t
 static esp_err_t __attribute__((unused)) verify_secure_boot_signature(bootloader_sha256_handle_t sha_handle, esp_image_metadata_t *data, uint8_t *image_digest, uint8_t *verified_digest);
 static esp_err_t __attribute__((unused)) verify_simple_hash(bootloader_sha256_handle_t sha_handle, esp_image_metadata_t *data);
 
-static esp_err_t image_load(esp_image_load_mode_t mode, const esp_partition_pos_t *part, esp_image_metadata_t *data)
+static esp_err_t image_load_impl(esp_image_load_mode_t mode, uint32_t part_offset, uint32_t part_size, esp_image_metadata_t *data)
 {
 #ifdef BOOTLOADER_BUILD
     bool do_load   = (mode == ESP_IMAGE_LOAD) || (mode == ESP_IMAGE_LOAD_NO_VALIDATE);
@@ -113,17 +113,17 @@ static esp_err_t image_load(esp_image_load_mode_t mode, const esp_partition_pos_
     uint32_t *checksum = NULL;
     bootloader_sha256_handle_t sha_handle = NULL;
 
-    if (data == NULL || part == NULL) {
+    if (data == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
 
-    if (part->size > SIXTEEN_MB) {
+    if (part_size > SIXTEEN_MB) {
         err = ESP_ERR_INVALID_ARG;
-        FAIL_LOAD("partition size 0x%x invalid, larger than 16MB", part->size);
+        FAIL_LOAD("partition size 0x%x invalid, larger than 16MB", part_size);
     }
 
     bzero(data, sizeof(esp_image_metadata_t));
-    data->start_addr = part->offset;
+    data->start_addr = part_offset;
 
     ESP_LOGD(TAG, "reading image header @ 0x%x", data->start_addr);
     err = bootloader_flash_read(data->start_addr, &data->image, sizeof(esp_image_header_t), true);
@@ -200,8 +200,8 @@ static esp_err_t image_load(esp_image_load_mode_t mode, const esp_partition_pos_
         bool verify_sha;
 
         if (data->start_addr != ESP_BOOTLOADER_OFFSET) {
-            if (data->image_len > part->size) {
-                FAIL_LOAD("Image length %d doesn't fit in partition length %d", data->image_len, part->size);
+            if (data->image_len > part_size) {
+                FAIL_LOAD("Image length %d doesn't fit in partition length %d", data->image_len, part_size);
             }
 
             // No secure boot, but SHA-256 can be appended for basic corruption detection
@@ -263,6 +263,14 @@ err:
     bzero(data, sizeof(esp_image_metadata_t));
     return err;
     }
+
+static esp_err_t image_load(esp_image_load_mode_t mode, const esp_partition_pos_t *part, esp_image_metadata_t *data)
+{
+    if (part == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return image_load_impl(mode, part->offset, part->size, data);
+}
 
 esp_err_t bootloader_load_image(const esp_partition_pos_t *part, esp_image_metadata_t *data)
 {
