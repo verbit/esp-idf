@@ -112,11 +112,6 @@ static esp_err_t image_load(esp_image_load_mode_t mode, const esp_partition_pos_
     uint32_t checksum_word = ESP_ROM_CHECKSUM_INITIAL;
     uint32_t *checksum = NULL;
     bootloader_sha256_handle_t sha_handle = NULL;
-#if SECURE_BOOT_CHECK_SIGNATURE
-     /* used for anti-FI checks */
-    uint8_t image_digest[HASH_LEN] = { [ 0 ... 31] = 0xEE };
-    uint8_t verified_digest[HASH_LEN] = { [ 0 ... 31 ] = 0x01 };
-#endif
 
     if (data == NULL || part == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -140,11 +135,7 @@ static esp_err_t image_load(esp_image_load_mode_t mode, const esp_partition_pos_
         checksum = &checksum_word;
 
         // Calculate SHA-256 of image if secure boot is on, or if image has a hash appended
-#ifdef SECURE_BOOT_CHECK_SIGNATURE
-        if (1) {
-#else
         if (data->image.hash_appended) {
-#endif
             sha_handle = bootloader_sha256_start();
             if (sha_handle == NULL) {
                 return ESP_ERR_NO_MEM;
@@ -207,27 +198,17 @@ static esp_err_t image_load(esp_image_load_mode_t mode, const esp_partition_pos_
            esptool.py may have rewritten the header - rely on esptool.py having verified the bootloader at flashing time, instead.)
         */
         bool verify_sha;
-#if CONFIG_SECURE_BOOT_V2_ENABLED
-        verify_sha = true;
-#else // ESP32, or ESP32S2 without secure boot enabled
-        verify_sha = (data->start_addr != ESP_BOOTLOADER_OFFSET);
-#endif
 
-        if (verify_sha) {
+        if (data->start_addr != ESP_BOOTLOADER_OFFSET) {
             if (data->image_len > part->size) {
                 FAIL_LOAD("Image length %d doesn't fit in partition length %d", data->image_len, part->size);
             }
 
-#ifdef SECURE_BOOT_CHECK_SIGNATURE
-            // secure boot images have a signature appended
-            err = verify_secure_boot_signature(sha_handle, data, image_digest, verified_digest);
-#else
             // No secure boot, but SHA-256 can be appended for basic corruption detection
             if (sha_handle != NULL && !esp_cpu_in_ocd_debug_mode()) {
                 err = verify_simple_hash(sha_handle, data);
                 sha_handle = NULL; // calling verify_simple_hash finishes sha_handle
             }
-#endif // SECURE_BOOT_CHECK_SIGNATURE
         } else { // verify_sha
             // bootloader may still have a sha256 digest handle open
             if (sha_handle != NULL) {
@@ -253,26 +234,6 @@ static esp_err_t image_load(esp_image_load_mode_t mode, const esp_partition_pos_
     }
 
 #ifdef BOOTLOADER_BUILD
-
-#ifdef SECURE_BOOT_CHECK_SIGNATURE
-    /* If signature was checked in bootloader build, verified_digest should equal image_digest
-
-       This is to detect any fault injection that caused signature verification to not complete normally.
-
-       Any attack which bypasses this check should be of limited use as the RAM contents are still obfuscated, therefore we do the check
-       immediately before we deobfuscate.
-
-       Note: the conditions for making this check are the same as for setting verify_sha above, but on ESP32 SB V1 we move the test for
-       "only verify signature in bootloader" into the macro so it's tested multiple times.
-     */
-#if CONFIG_SECURE_BOOT_V2_ENABLED
-    ESP_FAULT_ASSERT(memcmp(image_digest, verified_digest, HASH_LEN) == 0);
-#else // Secure Boot V1 on ESP32, only verify signatures for apps not bootloaders
-    ESP_FAULT_ASSERT(data->start_addr == ESP_BOOTLOADER_OFFSET || memcmp(image_digest, verified_digest, HASH_LEN) == 0);
-#endif
-
-#endif // SECURE_BOOT_CHECK_SIGNATURE
-
     // Deobfuscate RAM
     if (do_load && ram_obfs_value[0] != 0 && ram_obfs_value[1] != 0) {
         for (int i = 0; i < data->image.segment_count; i++) {
