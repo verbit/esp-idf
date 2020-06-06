@@ -56,8 +56,6 @@
 
 #include "sdkconfig.h"
 #include "esp_image_format.h"
-#include "esp_secure_boot.h"
-#include "esp_flash_encrypt.h"
 #include "esp_flash_partitions.h"
 #include "bootloader_flash.h"
 #include "bootloader_random.h"
@@ -72,8 +70,6 @@ static const char *TAG = "boot";
 /* Reduce literal size for some generic string literals */
 #define MAP_ERR_MSG "Image contains multiple %s segments. Only the last one will be mapped."
 
-static bool ota_has_initial_contents;
-
 static void load_image(const esp_image_metadata_t *image_data);
 static void unpack_load_app(const esp_image_metadata_t *data);
 static void set_cache_and_start_app(uint32_t drom_addr,
@@ -84,112 +80,17 @@ static void set_cache_and_start_app(uint32_t drom_addr,
                                     uint32_t irom_size,
                                     uint32_t entry_addr);
 
-bool bootloader_utility_load_partition_table(bootloader_state_t *bs)
-{
-    const esp_partition_info_t *partitions;
-    const char *partition_usage;
-    esp_err_t err;
-    int num_partitions;
-
-    partitions = bootloader_mmap(ESP_PARTITION_TABLE_OFFSET, ESP_PARTITION_TABLE_MAX_LEN);
-    if (!partitions) {
-        ESP_LOGE(TAG, "bootloader_mmap(0x%x, 0x%x) failed", ESP_PARTITION_TABLE_OFFSET, ESP_PARTITION_TABLE_MAX_LEN);
-        return false;
-    }
-    ESP_LOGD(TAG, "mapped partition table 0x%x at 0x%x", ESP_PARTITION_TABLE_OFFSET, (intptr_t)partitions);
-
-    err = esp_partition_table_verify(partitions, true, &num_partitions);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to verify partition table");
-        return false;
-    }
-
-    ESP_LOGI(TAG, "Partition Table:");
-    ESP_LOGI(TAG, "## Label            Usage          Type ST Offset   Length");
-
-    for (int i = 0; i < num_partitions; i++) {
-        const esp_partition_info_t *partition = &partitions[i];
-        ESP_LOGD(TAG, "load partition table entry 0x%x", (intptr_t)partition);
-        ESP_LOGD(TAG, "type=%x subtype=%x", partition->type, partition->subtype);
-        partition_usage = "unknown";
-
-        /* valid partition table */
-        switch (partition->type) {
-        case PART_TYPE_APP: /* app partition */
-            switch (partition->subtype) {
-            case PART_SUBTYPE_FACTORY: /* factory binary */
-                bs->factory = partition->pos;
-                partition_usage = "factory app";
-                break;
-            case PART_SUBTYPE_TEST: /* test binary */
-                bs->test = partition->pos;
-                partition_usage = "test app";
-                break;
-            default:
-                /* OTA binary */
-                if ((partition->subtype & ~PART_SUBTYPE_OTA_MASK) == PART_SUBTYPE_OTA_FLAG) {
-                    bs->ota[partition->subtype & PART_SUBTYPE_OTA_MASK] = partition->pos;
-                    ++bs->app_count;
-                    partition_usage = "OTA app";
-                } else {
-                    partition_usage = "Unknown app";
-                }
-                break;
-            }
-            break; /* PART_TYPE_APP */
-        case PART_TYPE_DATA: /* data partition */
-            switch (partition->subtype) {
-            case PART_SUBTYPE_DATA_OTA: /* ota data */
-                bs->ota_info = partition->pos;
-                partition_usage = "OTA data";
-                break;
-            case PART_SUBTYPE_DATA_RF:
-                partition_usage = "RF data";
-                break;
-            case PART_SUBTYPE_DATA_WIFI:
-                partition_usage = "WiFi data";
-                break;
-            case PART_SUBTYPE_DATA_NVS_KEYS:
-                partition_usage = "NVS keys";
-                break;
-            case PART_SUBTYPE_DATA_EFUSE_EM:
-                partition_usage = "efuse";
-#ifdef CONFIG_BOOTLOADER_EFUSE_SECURE_VERSION_EMULATE
-                esp_efuse_init(partition->pos.offset, partition->pos.size);
-#endif
-                break;
-            default:
-                partition_usage = "Unknown data";
-                break;
-            }
-            break; /* PARTITION_USAGE_DATA */
-        default: /* other partition type */
-            break;
-        }
-
-        /* print partition type info */
-        ESP_LOGI(TAG, "%2d %-16s %-16s %02x %02x %08x %08x", i, partition->label, partition_usage,
-                 partition->type, partition->subtype,
-                 partition->pos.offset, partition->pos.size);
-    }
-
-    bootloader_munmap(partitions);
-
-    ESP_LOGI(TAG, "End of partition table");
-    return true;
-}
-
 /* Return true if a partition has a valid app image that was successfully loaded */
-static bool try_load_partition(const esp_partition_pos_t *partition, esp_image_metadata_t *data)
+static bool try_load_partition(uint32_t partition_offset, uint32_t partition_size, esp_image_metadata_t *data)
 {
-    if (partition->size == 0) {
+    if (partition_size == 0) {
         ESP_LOGD(TAG, "Can't boot from zero-length partition");
         return false;
     }
 #ifdef BOOTLOADER_BUILD
-    if (bootloader_load_image(partition, data) == ESP_OK) {
+    if (image_load(ESP_IMAGE_LOAD, partition_offset, partition_size, data) == ESP_OK) {
         ESP_LOGI(TAG, "Loaded app from partition at offset 0x%x",
-                 partition->offset);
+                 partition_offset);
         return true;
     }
 #endif
@@ -197,16 +98,12 @@ static bool try_load_partition(const esp_partition_pos_t *partition, esp_image_m
     return false;
 }
 
-void bootloader_utility_load_boot_image(const bootloader_state_t *bs, int start_index)
+void bootloader_utility_load_boot_image(uint32_t partition_offset, uint32_t partition_size)
 {
-    int index = start_index;
-    esp_partition_pos_t part;
     esp_image_metadata_t image_data;
 
-    part = bs->factory;
-
-    ESP_LOGD(TAG, "Trying partition index %d offs 0x%x size 0x%x", index, part.offset, part.size);
-    if (try_load_partition(&part, &image_data)) {
+    ESP_LOGD(TAG, "Trying partition offs 0x%x size 0x%x", partition_offset, partition_size);
+    if (try_load_partition(partition_offset, partition_size, &image_data)) {
         load_image(&image_data);
     }
 
@@ -377,45 +274,6 @@ void bootloader_reset(void)
 #endif
 }
 
-esp_err_t bootloader_sha256_hex_to_str(char *out_str, const uint8_t *in_array_hex, size_t len)
-{
-    if (out_str == NULL || in_array_hex == NULL || len == 0) {
-        return ESP_ERR_INVALID_ARG;
-    }
-    for (int i = 0; i < len; i++) {
-        for (int shift = 0; shift < 2; shift++) {
-            uint8_t nibble = (in_array_hex[i] >> (shift ? 0 : 4)) & 0x0F;
-            if (nibble < 10) {
-                out_str[i * 2 + shift] = '0' + nibble;
-            } else {
-                out_str[i * 2 + shift] = 'a' + nibble - 10;
-            }
-        }
-    }
-    return ESP_OK;
-}
-
-void bootloader_debug_buffer(const void *buffer, size_t length, const char *label)
-{
-#if BOOT_LOG_LEVEL >= LOG_LEVEL_DEBUG
-    assert(length <= 128); // Avoid unbounded VLA size
-    const uint8_t *bytes = (const uint8_t *)buffer;
-    char hexbuf[length * 2 + 1];
-    hexbuf[length * 2] = 0;
-    for (int i = 0; i < length; i++) {
-        for (int shift = 0; shift < 2; shift++) {
-            uint8_t nibble = (bytes[i] >> (shift ? 0 : 4)) & 0x0F;
-            if (nibble < 10) {
-                hexbuf[i * 2 + shift] = '0' + nibble;
-            } else {
-                hexbuf[i * 2 + shift] = 'a' + nibble - 10;
-            }
-        }
-    }
-    ESP_LOGD(TAG, "%s: %s", label, hexbuf);
-#endif
-}
-
 esp_err_t bootloader_sha256_flash_contents(uint32_t flash_offset, uint32_t len, uint8_t *digest)
 {
     if (digest == NULL) {
@@ -434,7 +292,7 @@ esp_err_t bootloader_sha256_flash_contents(uint32_t flash_offset, uint32_t len, 
     while (len > 0) {
         uint32_t mmu_page_offset = ((flash_offset & MMAP_ALIGNED_MASK) != 0) ? 1 : 0; /* Skip 1st MMU Page if it is already populated */
         uint32_t partial_image_len = MIN(len, ((mmu_free_pages_count - mmu_page_offset) * SPI_FLASH_MMU_PAGE_SIZE)); /* Read the image that fits in the free MMU pages */
-        
+
         const void * image = bootloader_mmap(flash_offset, partial_image_len);
         if (image == NULL) {
             bootloader_sha256_finish(sha_handle, NULL);

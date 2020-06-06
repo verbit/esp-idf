@@ -15,7 +15,6 @@
 
 #include <bootloader_flash.h>
 #include <esp_log.h>
-#include <esp_flash_encrypt.h>
 #if CONFIG_IDF_TARGET_ESP32S2
 #include "esp32s2/rom/spi_flash.h"
 #endif
@@ -59,11 +58,8 @@ void bootloader_munmap(const void *mapping)
 
 esp_err_t bootloader_flash_read(size_t src, void *dest, size_t size, bool allow_decrypt)
 {
-    if (allow_decrypt && esp_flash_encryption_enabled()) {
-        return spi_flash_read_encrypted(src, dest, size);
-    } else {
-        return spi_flash_read(src, dest, size);
-    }
+
+    return spi_flash_read(src, dest, size);
 }
 
 esp_err_t bootloader_flash_write(size_t dest_addr, void *src, size_t size, bool write_encrypted)

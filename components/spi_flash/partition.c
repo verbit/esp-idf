@@ -22,7 +22,6 @@
 #include "esp_flash.h"
 #include "esp_spi_flash.h"
 #include "esp_partition.h"
-#include "esp_flash_encrypt.h"
 #include "esp_log.h"
 #include "bootloader_common.h"
 #include "bootloader_util.h"
@@ -190,17 +189,7 @@ static esp_err_t load_partitions(void)
         item->info.subtype = it->subtype;
         item->info.encrypted = it->flags & PART_FLAG_ENCRYPTED;
         item->user_registered = false;
-
-        if (!esp_flash_encryption_enabled()) {
-            /* If flash encryption is not turned on, no partitions should be treated as encrypted */
-            item->info.encrypted = false;
-        } else if (it->type == PART_TYPE_APP
-                || (it->type == PART_TYPE_DATA && it->subtype == PART_SUBTYPE_DATA_OTA)
-                || (it->type == PART_TYPE_DATA && it->subtype == PART_SUBTYPE_DATA_NVS_KEYS)) {
-            /* If encryption is turned on, all app partitions and OTA data
-               are always encrypted */
-            item->info.encrypted = true;
-        }
+        item->info.encrypted = false;
 
         // it->label may not be zero-terminated
         strncpy(item->info.label, (const char*) it->label, sizeof(item->info.label) - 1);

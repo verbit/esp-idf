@@ -19,8 +19,6 @@
 
 static const char *TAG = "boot";
 
-static int select_partition_number(bootloader_state_t *bs);
-
 /*
  * We arrive here after the ROM bootloader finished loading this second stage bootloader from flash.
  * The hardware is mostly uninitialized, flash cache is down and the app CPU is in reset.
@@ -33,28 +31,10 @@ void __attribute__((noreturn)) call_start_cpu0(void)
         bootloader_reset();
     }
 
-    // 2. Select the number of boot partition
-    bootloader_state_t bs = {0};
-    int boot_index = select_partition_number(&bs);
-    if (boot_index == INVALID_INDEX) {
-        bootloader_reset();
-    }
-
-    // 3. Load the app image for booting
-    bootloader_utility_load_boot_image(&bs, boot_index);
-}
-
-// Select the number of boot partition
-static int select_partition_number(bootloader_state_t *bs)
-{
-    // 1. Load partition table
-    if (!bootloader_utility_load_partition_table(bs)) {
-        ESP_LOGE(TAG, "load partition table error!");
-        return INVALID_INDEX;
-    }
-
-    // 2. Select the number of boot partition
-    return FACTORY_INDEX;
+    // 2. Load the app image for booting
+    const uint32_t PARTITION_OFFSET = 0x10000; // 64 KiB
+    const uint32_t PARTITION_SIZE = 0x200000; // 2 MiB
+    bootloader_utility_load_boot_image(PARTITION_OFFSET, PARTITION_SIZE);
 }
 
 // Return global reent struct if any newlib functions are linked to bootloader

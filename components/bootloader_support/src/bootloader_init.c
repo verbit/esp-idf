@@ -21,7 +21,6 @@
 #include "bootloader_random.h"
 #include "bootloader_clock.h"
 #include "bootloader_common.h"
-#include "esp_flash_encrypt.h"
 #include "soc/cpu.h"
 #include "soc/rtc.h"
 #include "hal/wdt_hal.h"

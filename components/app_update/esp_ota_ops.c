@@ -26,8 +26,6 @@
 #include "esp_partition.h"
 #include "esp_spi_flash.h"
 #include "esp_image_format.h"
-#include "esp_secure_boot.h"
-#include "esp_flash_encrypt.h"
 #include "esp_spi_flash.h"
 #include "sdkconfig.h"
 
@@ -203,38 +201,6 @@ esp_err_t esp_ota_write(esp_ota_handle_t handle, const void *data, size_t size)
             if (it->wrote_size == 0 && it->partial_bytes == 0 && size > 0 && data_bytes[0] != ESP_IMAGE_HEADER_MAGIC) {
                 ESP_LOGE(TAG, "OTA image has invalid magic byte (expected 0xE9, saw 0x%02x)", data_bytes[0]);
                 return ESP_ERR_OTA_VALIDATE_FAILED;
-            }
-
-            if (esp_flash_encryption_enabled()) {
-                /* Can only write 16 byte blocks to flash, so need to cache anything else */
-                size_t copy_len;
-
-                /* check if we have partially written data from earlier */
-                if (it->partial_bytes != 0) {
-                    copy_len = MIN(16 - it->partial_bytes, size);
-                    memcpy(it->partial_data + it->partial_bytes, data_bytes, copy_len);
-                    it->partial_bytes += copy_len;
-                    if (it->partial_bytes != 16) {
-                        return ESP_OK; /* nothing to write yet, just filling buffer */
-                    }
-                    /* write 16 byte to partition */
-                    ret = esp_partition_write(it->part, it->wrote_size, it->partial_data, 16);
-                    if (ret != ESP_OK) {
-                        return ret;
-                    }
-                    it->partial_bytes = 0;
-                    memset(it->partial_data, 0xFF, 16);
-                    it->wrote_size += 16;
-                    data_bytes += copy_len;
-                    size -= copy_len;
-                }
-
-                /* check if we need to save trailing data that we're about to write */
-                it->partial_bytes = size % 16;
-                if (it->partial_bytes != 0) {
-                    size -= it->partial_bytes;
-                    memcpy(it->partial_data, data_bytes + size, it->partial_bytes);
-                }
             }
 
             ret = esp_partition_write(it->part, it->wrote_size, data_bytes, size);

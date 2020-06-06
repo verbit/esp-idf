@@ -15,7 +15,6 @@
 #include <sys/param.h>
 #include <soc/cpu.h>
 #include <bootloader_utility.h>
-#include <esp_secure_boot.h>
 #include <esp_fault.h>
 #include <esp_log.h>
 #include <esp_attr.h>
@@ -93,11 +92,39 @@ static esp_err_t verify_segment_header(int index, const esp_image_segment_header
     while(0)
 
 static esp_err_t verify_checksum(bootloader_sha256_handle_t sha_handle, uint32_t checksum_word, esp_image_metadata_t *data);
-
-static esp_err_t __attribute__((unused)) verify_secure_boot_signature(bootloader_sha256_handle_t sha_handle, esp_image_metadata_t *data, uint8_t *image_digest, uint8_t *verified_digest);
 static esp_err_t __attribute__((unused)) verify_simple_hash(bootloader_sha256_handle_t sha_handle, esp_image_metadata_t *data);
 
-static esp_err_t image_load_impl(esp_image_load_mode_t mode, uint32_t part_offset, uint32_t part_size, esp_image_metadata_t *data)
+/**
+ * @brief Debug log contents of a buffer as hexadecimal
+ *
+ * @note Only works if component log level is DEBUG or higher.
+ *
+ * @param buffer Buffer to log
+ * @param length Length of buffer in bytes. Maximum length 128 bytes.
+ * @param label Label to print at beginning of log line.
+ */
+static void bootloader_debug_buffer(const void *buffer, size_t length, const char *label)
+{
+#if BOOT_LOG_LEVEL >= LOG_LEVEL_DEBUG
+    assert(length <= 128); // Avoid unbounded VLA size
+    const uint8_t *bytes = (const uint8_t *)buffer;
+    char hexbuf[length * 2 + 1];
+    hexbuf[length * 2] = 0;
+    for (int i = 0; i < length; i++) {
+        for (int shift = 0; shift < 2; shift++) {
+            uint8_t nibble = (bytes[i] >> (shift ? 0 : 4)) & 0x0F;
+            if (nibble < 10) {
+                hexbuf[i * 2 + shift] = '0' + nibble;
+            } else {
+                hexbuf[i * 2 + shift] = 'a' + nibble - 10;
+            }
+        }
+    }
+    ESP_LOGD(TAG, "%s: %s", label, hexbuf);
+#endif
+}
+
+esp_err_t image_load(esp_image_load_mode_t mode, uint32_t part_offset, uint32_t part_size, esp_image_metadata_t *data)
 {
 #ifdef BOOTLOADER_BUILD
     bool do_load   = (mode == ESP_IMAGE_LOAD) || (mode == ESP_IMAGE_LOAD_NO_VALIDATE);
@@ -197,8 +224,6 @@ static esp_err_t image_load_impl(esp_image_load_mode_t mode, uint32_t part_offse
            (For non-secure boot, we don't verify any SHA-256 hash appended to the bootloader because
            esptool.py may have rewritten the header - rely on esptool.py having verified the bootloader at flashing time, instead.)
         */
-        bool verify_sha;
-
         if (data->start_addr != ESP_BOOTLOADER_OFFSET) {
             if (data->image_len > part_size) {
                 FAIL_LOAD("Image length %d doesn't fit in partition length %d", data->image_len, part_size);
@@ -263,37 +288,6 @@ err:
     bzero(data, sizeof(esp_image_metadata_t));
     return err;
     }
-
-static esp_err_t image_load(esp_image_load_mode_t mode, const esp_partition_pos_t *part, esp_image_metadata_t *data)
-{
-    if (part == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-    return image_load_impl(mode, part->offset, part->size, data);
-}
-
-esp_err_t bootloader_load_image(const esp_partition_pos_t *part, esp_image_metadata_t *data)
-{
-#ifdef BOOTLOADER_BUILD
-    return image_load(ESP_IMAGE_LOAD, part, data);
-#else
-    return ESP_FAIL;
-#endif
-}
-
-esp_err_t bootloader_load_image_no_verify(const esp_partition_pos_t *part, esp_image_metadata_t *data)
-{
-#ifdef BOOTLOADER_BUILD
-    return image_load(ESP_IMAGE_LOAD_NO_VALIDATE, part, data);
-#else
-    return ESP_FAIL;
-#endif
-}
-
-esp_err_t esp_image_verify(esp_image_load_mode_t mode, const esp_partition_pos_t *part, esp_image_metadata_t *data)
-{
-    return image_load(mode, part, data);
-}
 
 static esp_err_t verify_image_header(uint32_t src_addr, const esp_image_header_t *image, bool silent)
 {
@@ -504,10 +498,6 @@ static esp_err_t process_segment(int index, uint32_t flash_addr, esp_image_segme
 
     int32_t data_len_remain = data_len;
     while (data_len_remain > 0) {
-#if SECURE_BOOT_CHECK_SIGNATURE && defined(BOOTLOADER_BUILD)
-        /* Double check the address verification done above */
-        ESP_FAULT_ASSERT(!do_load || verify_load_addresses(0, load_addr, load_addr + data_len_remain, false, false));
-#endif
         uint32_t offset_page = ((data_addr & MMAP_ALIGNED_MASK) != 0) ? 1 : 0;
         /* Data we could map in case we are not aligned to PAGE boundary is one page size lesser. */
         data_len = MIN(data_len_remain, ((free_page_count - offset_page) * SPI_FLASH_MMU_PAGE_SIZE));
@@ -713,80 +703,6 @@ static esp_err_t verify_checksum(bootloader_sha256_handle_t sha_handle, uint32_t
     }
     data->image_len = length;
 
-    return ESP_OK;
-}
-
-static esp_err_t verify_secure_boot_signature(bootloader_sha256_handle_t sha_handle, esp_image_metadata_t *data, uint8_t *image_digest, uint8_t *verified_digest)
-{
-#ifdef SECURE_BOOT_CHECK_SIGNATURE
-    uint32_t end = data->start_addr + data->image_len;
-
-    ESP_LOGI(TAG, "Verifying image signature...");
-
-    // For secure boot, we calculate the signature hash over the whole file, which includes any "simple" hash
-    // appended to the image for corruption detection
-    if (data->image.hash_appended) {
-        const void *simple_hash = bootloader_mmap(end - HASH_LEN, HASH_LEN);
-        bootloader_sha256_data(sha_handle, simple_hash, HASH_LEN);
-        bootloader_munmap(simple_hash);
-    }
-
-#if CONFIG_SECURE_SIGNED_APPS_RSA_SCHEME
-    // End of the image needs to be padded all the way to a 4KB boundary, after the simple hash
-    // (for apps they are usually already padded due to --secure-pad-v2, only a problem if this option was not used.)
-    uint32_t padded_end = (end + FLASH_SECTOR_SIZE - 1) & ~(FLASH_SECTOR_SIZE-1);
-    if (padded_end > end) {
-        const void *padding = bootloader_mmap(end, padded_end - end);
-        bootloader_sha256_data(sha_handle, padding, padded_end - end);
-        bootloader_munmap(padding);
-        end = padded_end;
-    }
-#endif
-
-    bootloader_sha256_finish(sha_handle, image_digest);
-
-    // Log the hash for debugging
-    bootloader_debug_buffer(image_digest, HASH_LEN, "Calculated secure boot hash");
-
-    // Use hash to verify signature block
-    esp_err_t err = ESP_ERR_IMAGE_INVALID;
-    const void *sig_block;
-#ifdef CONFIG_SECURE_SIGNED_APPS_ECDSA_SCHEME
-    ESP_FAULT_ASSERT(memcmp(image_digest, verified_digest, HASH_LEN) != 0); /* sanity check that these values start differently */
-    sig_block = bootloader_mmap(data->start_addr + data->image_len, sizeof(esp_secure_boot_sig_block_t));
-    err = esp_secure_boot_verify_ecdsa_signature_block(sig_block, image_digest, verified_digest);
-#elif CONFIG_SECURE_SIGNED_APPS_RSA_SCHEME
-    ESP_FAULT_ASSERT(memcmp(image_digest, verified_digest, HASH_LEN) != 0);  /* sanity check that these values start differently */
-    sig_block = bootloader_mmap(end, sizeof(ets_secure_boot_signature_t));
-    err = esp_secure_boot_verify_rsa_signature_block(sig_block, image_digest, verified_digest);
-#endif
-
-    bootloader_munmap(sig_block);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Secure boot signature verification failed");
-
-        // Go back and check if the simple hash matches or not (we're off the fast path so we can re-hash the whole image now)
-        ESP_LOGI(TAG, "Calculating simple hash to check for corruption...");
-        const void *whole_image = bootloader_mmap(data->start_addr, data->image_len - HASH_LEN);
-        if (whole_image != NULL) {
-            sha_handle = bootloader_sha256_start();
-            bootloader_sha256_data(sha_handle, whole_image, data->image_len - HASH_LEN);
-            bootloader_munmap(whole_image);
-            if (verify_simple_hash(sha_handle, data) != ESP_OK) {
-                ESP_LOGW(TAG, "image corrupted on flash");
-            } else {
-                ESP_LOGW(TAG, "image valid, signature bad");
-            }
-        }
-        return ESP_ERR_IMAGE_INVALID;
-    }
-
-#if CONFIG_SECURE_SIGNED_APPS_RSA_SCHEME
-    // Adjust image length result to include the appended signature
-    data->image_len = end - data->start_addr + sizeof(ets_secure_boot_signature_t);
-#endif
-
-#endif // SECURE_BOOT_CHECK_SIGNATURE
     return ESP_OK;
 }
 
