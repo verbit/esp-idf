@@ -17,29 +17,6 @@
 #include "esp_image_format.h"
 #include "bootloader_config.h"
 
-/**
- * @brief Load the selected partition and start application.
- *
- * Start from partition 'start_index', if not bootable then work backwards to FACTORY_INDEX
- * (ie try any OTA slots in descending order and then the factory partition).
- * If still nothing, start from 'start_index + 1' and work up to highest numbered OTA partition.
- * If still nothing, try TEST_APP_INDEX.
- * Everything this function calls must be located in the iram_loader_seg segment.
- *
- * @param[in] bs Bootloader state structure.
- * @param[in] start_index The index from which the search for images begins.
- */
-__attribute__((noreturn)) void bootloader_utility_load_boot_image(uint32_t partition_offset, uint32_t partition_size);
-
-/**
- * @brief Software reset the ESP32
- *
- * Bootloader code should call this in the case that it cannot proceed.
- *
- * It is not recommended to call this function from an app (if called, the app will abort).
- */
-__attribute__((noreturn)) void bootloader_reset(void);
-
 /** @brief Generates the digest of the data between offset & offset+length.
  *
  * This function should be used when the size of the data is larger than 3.2MB.
