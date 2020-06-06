@@ -19,7 +19,6 @@
 #include <esp_attr.h>
 #include <esp_spi_flash.h>
 #include <bootloader_flash.h>
-#include <bootloader_random.h>
 #include <bootloader_sha.h>
 #include "bootloader_util.h"
 #include "bootloader_common.h"
@@ -55,14 +54,6 @@ static const char *TAG = "esp_image";
 
 /* Headroom to ensure between stack SP (at time of checking) and data loaded from flash */
 #define STACK_LOAD_HEADROOM 32768
-
-#ifdef BOOTLOADER_BUILD
-/* 64 bits of random data to obfuscate loaded RAM with, until verification is complete
-   (Means loaded code isn't executable until after the secure boot check.)
-*/
-static uint32_t ram_obfs_value[2];
-
-#endif
 
 /* Return true if load_addr is an address the bootloader should load into */
 static bool should_load(uint32_t load_addr);
@@ -256,21 +247,6 @@ esp_err_t image_load(esp_image_load_mode_t mode, uint32_t part_offset, uint32_t 
     if (err != ESP_OK) {
         goto err;
     }
-
-#ifdef BOOTLOADER_BUILD
-    // Deobfuscate RAM
-    if (do_load && ram_obfs_value[0] != 0 && ram_obfs_value[1] != 0) {
-        for (int i = 0; i < data->image.segment_count; i++) {
-            uint32_t load_addr = data->segments[i].load_addr;
-            if (should_load(load_addr)) {
-                uint32_t *loaded = (uint32_t *)load_addr;
-                for (int j = 0; j < data->segments[i].data_len / sizeof(uint32_t); j++) {
-                    loaded[j] ^= (j & 1) ? ram_obfs_value[0] : ram_obfs_value[1];
-                }
-            }
-        }
-    }
-#endif
 
     // Success!
     return ESP_OK;
@@ -541,10 +517,6 @@ static esp_err_t process_segment_data(intptr_t load_addr, uint32_t data_addr, ui
     }
 
 #ifdef BOOTLOADER_BUILD
-    // Set up the obfuscation value to use for loading
-    while (ram_obfs_value[0] == 0 || ram_obfs_value[1] == 0) {
-        bootloader_fill_random(ram_obfs_value, sizeof(ram_obfs_value));
-    }
     uint32_t *dest = (uint32_t *)load_addr;
 #endif
 
@@ -558,7 +530,7 @@ static esp_err_t process_segment_data(intptr_t load_addr, uint32_t data_addr, ui
         }
 #ifdef BOOTLOADER_BUILD
         if (do_load) {
-            dest[w_i] = w ^ ((w_i & 1) ? ram_obfs_value[0] : ram_obfs_value[1]);
+            dest[w_i] = w;
         }
 #endif
         // SHA_CHUNK determined experimentally as the optimum size
