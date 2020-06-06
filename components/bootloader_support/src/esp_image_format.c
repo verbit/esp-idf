@@ -14,7 +14,6 @@
 #include <string.h>
 #include <sys/param.h>
 #include <soc/cpu.h>
-#include <bootloader_utility.h>
 #include <esp_fault.h>
 #include <esp_log.h>
 #include <esp_attr.h>

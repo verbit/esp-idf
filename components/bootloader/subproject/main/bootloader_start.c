@@ -20,7 +20,6 @@
 #include "esp_attr.h"
 #include "esp_log.h"
 #include "bootloader_init.h"
-#include "bootloader_utility.h"
 #include "bootloader_common.h"
 
 #if CONFIG_IDF_TARGET_ESP32
@@ -65,7 +64,6 @@
 #include "bootloader_random.h"
 // #include "bootloader_config.h"
 // #include "bootloader_common.h"
-// #include "bootloader_utility.h"
 // #include "bootloader_sha.h"
 // #include "esp_efuse.h"
 
@@ -78,8 +76,6 @@ static const char *TAG = "boot";
  * @brief Software reset the ESP32
  *
  * Bootloader code should call this in the case that it cannot proceed.
- *
- * It is not recommended to call this function from an app (if called, the app will abort).
  */
 __attribute__((noreturn)) static void bootloader_reset(void)
 {
@@ -245,16 +241,6 @@ static void unpack_load_app(const esp_image_metadata_t *data)
                             data->image.entry_addr);
 }
 
-// Copy loaded segments to RAM, set up caches for mapped segments, and start application.
-static void load_image(const esp_image_metadata_t *image_data)
-{
-    ESP_LOGI(TAG, "Disabling RNG early entropy source...");
-    bootloader_random_disable();
-
-    // copy loaded segments to RAM, set up caches for mapped segments, and start application
-    unpack_load_app(image_data);
-}
-
 /**
  * @brief Load the selected partition and start application.
  *
@@ -273,7 +259,10 @@ __attribute__((noreturn)) static void bootloader_utility_load_boot_image(uint32_
 
     ESP_LOGD(TAG, "Trying partition offs 0x%x size 0x%x", partition_offset, partition_size);
     if (try_load_partition(partition_offset, partition_size, &image_data)) {
-        load_image(&image_data);
+        ESP_LOGI(TAG, "Disabling RNG early entropy source...");
+	    bootloader_random_disable();
+	    // copy loaded segments to RAM, set up caches for mapped segments, and start application
+	    unpack_load_app(&image_data);
     }
 
     ESP_LOGE(TAG, "Factory app partition is not bootable");

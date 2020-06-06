@@ -1,5 +1,5 @@
 idf_component_register(SRCS "bootloader_start.c"
-                    REQUIRES bootloader bootloader_support)
+                    REQUIRES bootloader bootloader_support spi_flash)
 
 idf_build_get_property(target IDF_TARGET)
 set(scripts "ld/${target}/bootloader.ld"
