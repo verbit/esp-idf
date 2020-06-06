@@ -22,7 +22,3 @@
 [submodule "components/esp_wifi/lib"]
 	path = components/esp_wifi/lib
 	url = ../../espressif/esp32-wifi-lib.git
-
-[submodule "components/tinyusb/tinyusb"]
-	path = components/tinyusb/tinyusb
-	url = ../../espressif/tinyusb.git
