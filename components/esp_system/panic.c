@@ -19,7 +19,6 @@
 #include "esp_spi_flash.h"
 #include "esp_private/system_internal.h"
 #include "esp_private/gdbstub.h"
-#include "esp_ota_ops.h"
 
 #if CONFIG_APPTRACE_ENABLE
 #include "esp_app_trace.h"
@@ -185,7 +184,7 @@ void esp_panic_handler(panic_info_t *info)
      * description - a short description regarding the exception that occured
      * details - more details about the exception
      * state - processor state like register contents, and backtrace
-     * elf_info - details about the image currently running 
+     * elf_info - details about the image currently running
      *
      * NULL fields in panic_info_t are not printed.
      *
@@ -246,15 +245,7 @@ void esp_panic_handler(panic_info_t *info)
     reconfigure_all_wdts();
 
     PANIC_INFO_DUMP(info, state);
-    panic_print_str("\r\n");
-
-    panic_print_str("\r\nELF file SHA256: ");
-    char sha256_buf[65];
-    esp_ota_get_app_elf_sha256(sha256_buf, sizeof(sha256_buf));
-    panic_print_str(sha256_buf);
-    panic_print_str("\r\n");
-
-    panic_print_str("\r\n");
+    panic_print_str("\r\n\r\n");
 
 #if CONFIG_APPTRACE_ENABLE
     disable_all_wdts();
@@ -313,7 +304,7 @@ void esp_panic_handler(panic_info_t *info)
             break; // do not touch the previously set reset reason hint
         }
     }
-    
+
     panic_print_str("Rebooting...\r\n");
     panic_restart();
 #else

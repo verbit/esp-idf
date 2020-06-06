@@ -18,7 +18,6 @@
 #include "bootloader_utility.h"
 #include "esp_log.h"
 #include "esp_image_format.h"
-#include "esp_secure_boot.h"
 #include "mbedtls/sha256.h"
 #include "mbedtls/x509.h"
 #include "mbedtls/md.h"
@@ -260,7 +259,7 @@ esp_err_t esp_secure_boot_verify_rsa_signature_block(const ets_secure_boot_signa
             goto exit;
         }
 
-        ret = mbedtls_rsa_rsassa_pss_verify( &pk, mbedtls_ctr_drbg_random, &ctr_drbg, MBEDTLS_RSA_PUBLIC, MBEDTLS_MD_SHA256, 32, 
+        ret = mbedtls_rsa_rsassa_pss_verify( &pk, mbedtls_ctr_drbg_random, &ctr_drbg, MBEDTLS_RSA_PUBLIC, MBEDTLS_MD_SHA256, 32,
                                             sig_block->block[i].image_digest, sig_be);
         if (ret != 0) {
             ESP_LOGE(TAG, "Failed mbedtls_rsa_rsassa_pss_verify, err: %d", ret);
@@ -273,7 +272,7 @@ esp_err_t esp_secure_boot_verify_rsa_signature_block(const ets_secure_boot_signa
                 break;
             }
     }
-    
+
     free(sig_be);
     free(buf);
     return (!ret) ? ESP_OK : ESP_ERR_IMAGE_INVALID;

@@ -48,7 +48,6 @@ void esp_efuse_reset(void)
 #ifdef CONFIG_BOOTLOADER_EFUSE_SECURE_VERSION_EMULATE
 
 #include "../include_bootloader/bootloader_flash.h"
-#include "esp_flash_encrypt.h"
 
 static uint32_t esp_efuse_flash_offset = 0;
 static uint32_t esp_efuse_flash_size = 0;

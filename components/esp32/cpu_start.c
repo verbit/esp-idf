@@ -58,14 +58,12 @@
 #include "esp_coexist_internal.h"
 #include "esp_core_dump.h"
 #include "esp_private/dbg_stubs.h"
-#include "esp_flash_encrypt.h"
 #include "esp32/spiram.h"
 #include "esp_clk_internal.h"
 #include "esp_timer.h"
 #include "esp_pm.h"
 #include "esp_private/pm_impl.h"
 #include "trax.h"
-#include "esp_ota_ops.h"
 #include "esp_efuse.h"
 #include "bootloader_flash_config.h"
 #include "bootloader_mem.h"
@@ -188,26 +186,6 @@ void IRAM_ATTR call_start_cpu0(void)
 #endif
 
     ESP_EARLY_LOGI(TAG, "Pro cpu up.");
-    if (LOG_LOCAL_LEVEL >= ESP_LOG_INFO) {
-        const esp_app_desc_t *app_desc = esp_ota_get_app_description();
-        ESP_EARLY_LOGI(TAG, "Application information:");
-#ifndef CONFIG_APP_EXCLUDE_PROJECT_NAME_VAR
-        ESP_EARLY_LOGI(TAG, "Project name:     %s", app_desc->project_name);
-#endif
-#ifndef CONFIG_APP_EXCLUDE_PROJECT_VER_VAR
-        ESP_EARLY_LOGI(TAG, "App version:      %s", app_desc->version);
-#endif
-#ifdef CONFIG_BOOTLOADER_APP_SECURE_VERSION
-        ESP_EARLY_LOGI(TAG, "Secure version:   %d", app_desc->secure_version);
-#endif
-#ifdef CONFIG_APP_COMPILE_TIME_DATE
-        ESP_EARLY_LOGI(TAG, "Compile time:     %s %s", app_desc->date, app_desc->time);
-#endif
-        char buf[17];
-        esp_ota_get_app_elf_sha256(buf, sizeof(buf));
-        ESP_EARLY_LOGI(TAG, "ELF file SHA256:  %s...", buf);
-        ESP_EARLY_LOGI(TAG, "ESP-IDF:          %s", app_desc->idf_ver);
-    }
 
 #if !CONFIG_FREERTOS_UNICORE
     if (REG_GET_BIT(EFUSE_BLK0_RDATA3_REG, EFUSE_RD_CHIP_VER_DIS_APP_CPU)) {

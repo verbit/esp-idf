@@ -25,7 +25,6 @@
 #include "esp_log.h"
 #include "bootloader_common.h"
 #include "bootloader_util.h"
-#include "esp_ota_ops.h"
 
 #define HASH_LEN 32 /* SHA-256 digest length */
 
@@ -470,16 +469,16 @@ bool esp_partition_check_identity(const esp_partition_t *partition_1, const esp_
 
 bool esp_partition_main_flash_region_safe(size_t addr, size_t size)
 {
-    bool result = true;
     if (addr <= ESP_PARTITION_TABLE_OFFSET + ESP_PARTITION_TABLE_MAX_LEN) {
         return false;
     }
-    const esp_partition_t *p = esp_ota_get_running_partition();
-    if (addr >= p->address && addr < p->address + p->size) {
+    const uint32_t PARTITION_OFFSET = 0x10000; // 64 KiB
+    const uint32_t PARTITION_SIZE = 0x200000; // 2 MiB
+    if (addr >= PARTITION_OFFSET && addr < PARTITION_OFFSET + PARTITION_SIZE) {
         return false;
     }
-    if (addr < p->address && addr + size > p->address) {
+    if (addr < PARTITION_OFFSET && addr + size > PARTITION_OFFSET) {
         return false;
     }
-    return result;
+    return true;
 }

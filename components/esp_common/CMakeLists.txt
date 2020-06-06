@@ -44,7 +44,6 @@ else()
                       bootloader_support
                       nvs_flash
                       esp_wifi
-                      app_update
                       lwip
                       spi_flash
                       wpa_supplicant)

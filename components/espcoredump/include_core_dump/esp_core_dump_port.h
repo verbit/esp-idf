@@ -27,7 +27,6 @@
 #include "esp_core_dump_priv.h"
 #include "soc/cpu.h"
 #include "esp_debug_helpers.h"
-#include "esp_app_format.h"
 
 #ifdef __cplusplus
 extern "C" {

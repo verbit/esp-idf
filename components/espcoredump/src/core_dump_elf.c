@@ -14,7 +14,6 @@
 #include <string.h>
 #include "esp_attr.h"
 #include "esp_partition.h"
-#include "esp_ota_ops.h"
 #include "sdkconfig.h"
 #include "core_dump_elf.h"
 
@@ -513,9 +512,6 @@ static int elf_write_core_dump_info(core_dump_elf_t *self)
     void *extra_info;
 
     int data_len = (int)sizeof(self->elf_version_info.app_elf_sha256);
-    data_len = esp_ota_get_app_elf_sha256((char*)self->elf_version_info.app_elf_sha256, (size_t)data_len);
-    ESP_COREDUMP_LOG_PROCESS("Application SHA256='%s', length=%d.",
-                                self->elf_version_info.app_elf_sha256, data_len);
     self->elf_version_info.version = COREDUMP_VERSION;
     int ret = elf_add_note(self,
                             "ESP_CORE_DUMP_INFO",
