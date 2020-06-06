@@ -77,15 +77,6 @@ bool bootloader_common_ota_select_invalid(const esp_ota_select_entry_t *s);
 esp_comm_gpio_hold_t bootloader_common_check_long_hold_gpio(uint32_t num_pin, uint32_t delay_sec);
 
 /**
- * @brief Erase the partition data that is specified in the transferred list.
- *
- * @param[in] list_erase String containing a list of cleared partitions. Like this "nvs, phy". The string must be null-terminal.
- * @param[in] ota_data_erase If true then the OTA data partition will be cleared (if there is it in partition table).
- * @return    Returns true on success, false otherwise.
- */
-bool bootloader_common_erase_part_type_data(const char *list_erase, bool ota_data_erase);
-
-/**
  * @brief Determines if the list contains the label
  *
  * @param[in] list  A string of names delimited by commas or spaces. Like this "nvs, phy, data". The string must be null-terminated.
@@ -100,29 +91,6 @@ bool bootloader_common_label_search(const char *list, char *label);
  * @param drv GPIO drive level (determined by clock frequency)
  */
 void bootloader_configure_spi_pins(int drv);
-
-/**
- * @brief Calculates a sha-256 for a given partition or returns a appended digest.
- *
- * This function can be used to return the SHA-256 digest of application, bootloader and data partitions.
- * For apps with SHA-256 appended to the app image, the result is the appended SHA-256 value for the app image content.
- * The hash is verified before returning, if app content is invalid then the function returns ESP_ERR_IMAGE_INVALID.
- * For apps without SHA-256 appended to the image, the result is the SHA-256 of all bytes in the app image.
- * For other partition types, the result is the SHA-256 of the entire partition.
- *
- * @param[in]  address      Address of partition.
- * @param[in]  size         Size of partition.
- * @param[in]  type         Type of partition. For applications the type is 0, otherwise type is data.
- * @param[out] out_sha_256  Returned SHA-256 digest for a given partition.
- *
- * @return
- *          - ESP_OK: In case of successful operation.
- *          - ESP_ERR_INVALID_ARG: The size was 0 or the sha_256 was NULL.
- *          - ESP_ERR_NO_MEM: Cannot allocate memory for sha256 operation.
- *          - ESP_ERR_IMAGE_INVALID: App partition doesn't contain a valid app image.
- *          - ESP_FAIL: An allocation error occurred.
- */
-esp_err_t bootloader_common_get_sha256_of_partition(uint32_t address, uint32_t size, int type, uint8_t *out_sha_256);
 
 /**
  * @brief Returns the number of active otadata.
@@ -145,20 +113,6 @@ int bootloader_common_get_active_otadata(esp_ota_select_entry_t *two_otadata);
  *        - -1: If it does not have active otadata.
  */
 int bootloader_common_select_otadata(const esp_ota_select_entry_t *two_otadata, bool *valid_two_otadata, bool max);
-
-/**
- * @brief Returns esp_app_desc structure for app partition. This structure includes app version.
- *
- * Returns a description for the requested app partition.
- * @param[in] partition      App partition description.
- * @param[out] app_desc      Structure of info about app.
- * @return
- *  - ESP_OK:                Successful.
- *  - ESP_ERR_INVALID_ARG:   The arguments passed are not valid.
- *  - ESP_ERR_NOT_FOUND:     app_desc structure is not found. Magic word is incorrect.
- *  - ESP_FAIL:              mapping is fail.
- */
-esp_err_t bootloader_common_get_partition_description(const esp_partition_pos_t *partition, esp_app_desc_t *app_desc);
 
 /**
  * @brief Get chip revision

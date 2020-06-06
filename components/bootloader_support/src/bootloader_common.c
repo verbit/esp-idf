@@ -28,13 +28,11 @@
 #include "esp32s2/rom/gpio.h"
 #endif
 #include "esp_flash_partitions.h"
-#include "bootloader_flash.h"
 #include "bootloader_common.h"
 #include "soc/gpio_periph.h"
 #include "soc/rtc.h"
 #include "soc/efuse_reg.h"
 #include "esp_image_format.h"
-#include "bootloader_sha.h"
 #include "sys/param.h"
 
 #define ESP_PARTITION_HASH_LEN 32 /* SHA-256 digest length */
@@ -108,103 +106,6 @@ bool bootloader_common_label_search(const char *list, char *label)
     return false;
 }
 
-bool bootloader_common_erase_part_type_data(const char *list_erase, bool ota_data_erase)
-{
-    const esp_partition_info_t *partitions;
-    const char *marker;
-    esp_err_t err;
-    int num_partitions;
-    bool ret = true;
-
-    partitions = bootloader_mmap(ESP_PARTITION_TABLE_OFFSET, ESP_PARTITION_TABLE_MAX_LEN);
-    if (!partitions) {
-        ESP_LOGE(TAG, "bootloader_mmap(0x%x, 0x%x) failed", ESP_PARTITION_TABLE_OFFSET, ESP_PARTITION_TABLE_MAX_LEN);
-        return false;
-    }
-    ESP_LOGD(TAG, "mapped partition table 0x%x at 0x%x", ESP_PARTITION_TABLE_OFFSET, (intptr_t)partitions);
-
-    err = esp_partition_table_verify(partitions, true, &num_partitions);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to verify partition table");
-        ret = false;
-    } else {
-        ESP_LOGI(TAG, "## Label            Usage Offset   Length   Cleaned");
-        for (int i = 0; i < num_partitions; i++) {
-            const esp_partition_info_t *partition = &partitions[i];
-            char label[sizeof(partition->label) + 1] = {0};
-            if (partition->type == PART_TYPE_DATA) {
-                bool fl_ota_data_erase = false;
-                if (ota_data_erase == true && partition->subtype == PART_SUBTYPE_DATA_OTA) {
-                    fl_ota_data_erase = true;
-                }
-                // partition->label is not null-terminated string.
-                strncpy(label, (char *)&partition->label, sizeof(label) - 1);
-                if (fl_ota_data_erase == true || (bootloader_common_label_search(list_erase, label) == true)) {
-                    err = bootloader_flash_erase_range(partition->pos.offset, partition->pos.size);
-                    if (err != ESP_OK) {
-                        ret = false;
-                        marker = "err";
-                    } else {
-                        marker = "yes";
-                    }
-                } else {
-                    marker = "no";
-                }
-
-                ESP_LOGI(TAG, "%2d %-16s data  %08x %08x [%s]", i, partition->label,
-                         partition->pos.offset, partition->pos.size, marker);
-            }
-        }
-    }
-
-    bootloader_munmap(partitions);
-
-    return ret;
-}
-
-esp_err_t bootloader_common_get_sha256_of_partition (uint32_t address, uint32_t size, int type, uint8_t *out_sha_256)
-{
-    if (out_sha_256 == NULL || size == 0) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
-    if (type == PART_TYPE_APP) {
-        const esp_partition_pos_t partition_pos = {
-            .offset = address,
-            .size = size,
-        };
-        esp_image_metadata_t data;
-        // Function esp_image_verify() verifies and fills the structure data.
-        // here important to get: image_digest, image_len, hash_appended.
-        if (esp_image_verify(ESP_IMAGE_VERIFY_SILENT, &partition_pos, &data) != ESP_OK) {
-            return ESP_ERR_IMAGE_INVALID;
-        }
-        if (data.image.hash_appended) {
-            memcpy(out_sha_256, data.image_digest, ESP_PARTITION_HASH_LEN);
-            return ESP_OK;
-        }
-        // If image doesn't have a appended hash then hash calculates for entire image.
-        size = data.image_len;
-    }
-    // If image is type by data then hash is calculated for entire image.
-    const void *partition_bin = bootloader_mmap(address, size);
-    if (partition_bin == NULL) {
-        ESP_LOGE(TAG, "bootloader_mmap(0x%x, 0x%x) failed", address, size);
-        return ESP_FAIL;
-    }
-    bootloader_sha256_handle_t sha_handle = bootloader_sha256_start();
-    if (sha_handle == NULL) {
-        bootloader_munmap(partition_bin);
-        return ESP_ERR_NO_MEM;
-    }
-    bootloader_sha256_data(sha_handle, partition_bin, size);
-    bootloader_sha256_finish(sha_handle, out_sha_256);
-
-    bootloader_munmap(partition_bin);
-
-    return ESP_OK;
-}
-
 int bootloader_common_select_otadata(const esp_ota_select_entry_t *two_otadata, bool *valid_two_otadata, bool max)
 {
     if (two_otadata == NULL || valid_two_otadata == NULL) {
@@ -240,28 +141,6 @@ int bootloader_common_get_active_otadata(esp_ota_select_entry_t *two_otadata)
     valid_two_otadata[0] = bootloader_common_ota_select_valid(&two_otadata[0]);
     valid_two_otadata[1] = bootloader_common_ota_select_valid(&two_otadata[1]);
     return bootloader_common_select_otadata(two_otadata, valid_two_otadata, true);
-}
-
-esp_err_t bootloader_common_get_partition_description(const esp_partition_pos_t *partition, esp_app_desc_t *app_desc)
-{
-    if (partition == NULL || app_desc == NULL || partition->offset == 0) {
-        return ESP_ERR_INVALID_ARG;
-    }
-
-    const uint8_t *image = bootloader_mmap(partition->offset, partition->size);
-    if (image == NULL) {
-        ESP_LOGE(TAG, "bootloader_mmap(0x%x, 0x%x) failed", partition->offset, partition->size);
-        return ESP_FAIL;
-    }
-
-    memcpy(app_desc, image + sizeof(esp_image_header_t) + sizeof(esp_image_segment_header_t), sizeof(esp_app_desc_t));
-    bootloader_munmap(image);
-
-    if (app_desc->magic_word != ESP_APP_DESC_MAGIC_WORD) {
-        return ESP_ERR_NOT_FOUND;
-    }
-
-    return ESP_OK;
 }
 
 void bootloader_common_vddsdio_configure(void)
